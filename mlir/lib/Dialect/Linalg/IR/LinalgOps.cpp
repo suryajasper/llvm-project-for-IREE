@@ -635,6 +635,29 @@ struct FoldFillWithPad final : public OpRewritePattern<tensor::PadOp> {
   }
 };
 
+/// Fold tensor.extract(linalg.fill(<input>)) into <input>
+struct FoldFillWithTensorExtract : public OpRewritePattern<tensor::ExtractOp> {
+public:
+  using OpRewritePattern<tensor::ExtractOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(tensor::ExtractOp extractOp,
+                                PatternRewriter &rewriter) const override {
+    // see if tensor input of tensor.extract op is result of linalg.fill op
+    auto fillOp = extractOp.getTensor().getDefiningOp<linalg::FillOp>();
+    if (!fillOp) {
+      return failure();
+    }
+
+    // get scalar input operand of linalg.fill
+    Value extractedScalar = fillOp.getInputs()[0];
+
+    // replace tensor.extract op with op that simply produces the scalar
+    rewriter.replaceOpWithNewOp<arith::ExtFOp>(
+        extractOp, extractedScalar.getType(), extractedScalar);
+    return success();
+  }
+};
+
 /// Fold tensor.insert_slice(tensor.pad(<input>), linalg.fill) into
 /// tensor.insert_slice(<input>, linalg.fill) if the padding value and the
 /// filling value are the same.
@@ -735,7 +758,8 @@ struct FoldInsertPadIntoFill : public OpRewritePattern<tensor::InsertSliceOp> {
 void FillOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                          MLIRContext *context) {
   results
-      .add<FoldFillWithPad, FoldFillWithTensorReshape<tensor::CollapseShapeOp>,
+      .add<FoldFillWithTensorExtract, 
+           FoldFillWithPad, FoldFillWithTensorReshape<tensor::CollapseShapeOp>,
            FoldFillWithTensorReshape<tensor::ExpandShapeOp>,
            FoldInsertPadIntoFill>(context);
 }
