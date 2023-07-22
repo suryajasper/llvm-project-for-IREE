@@ -336,6 +336,25 @@ func.func @fold_fill_reshape_dynamic(%arg0 : tensor<?x?x?x?x?xf32>) -> tensor<?x
 }
 
 // -----
+// CHECK-LABEL: func @fold_fill_extract()
+func.func @fold_fill_extract() -> i1 {
+  //  CHECK:   %[[SCALAR:.+]] = arith.constant
+  %true = arith.constant true
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+
+  //  CHECK:   %[[FILL:.+]] = linalg.fill ins(%{{.+}}{{.*}}outs(%[[SCALAR]]
+  %empty_dynamic = tensor.empty(%c1) : tensor<1x2x3x?xi1>
+  %filled = linalg.fill ins(%true : i1) outs(%empty_dynamic : tensor<1x2x3x?xi1>) -> tensor<1x2x3x?xi1>
+
+  //  CHECK:   %[[EXTRACTED:.+]] = tensor.extract %[[FILL]]
+  %extracted = tensor.extract %filled[%c0, %c0, %c0, %c0] : tensor<1x2x3x?xi1>
+
+  //  CHECK:   return %[[EXTRACTED]]
+  return %extracted : i1
+}
+
+// -----
 
 // CHECK: func @fold_self_copy
 func.func @fold_self_copy(%0 : memref<4x16xf32>) {
