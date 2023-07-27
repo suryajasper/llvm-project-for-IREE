@@ -336,17 +336,15 @@ func.func @fold_fill_reshape_dynamic(%arg0 : tensor<?x?x?x?x?xf32>) -> tensor<?x
 }
 
 // -----
-// CHECK-LABEL: func @fold_fill_extract()
+//       CHECK: func @fold_fill_extract
 //  CHECK-SAME:   %[[ARG0:.+]]: i1
 func.func @fold_fill_extract(%arg0 : i1) -> i1 {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
-
-  //  CHECK:   %[[FILL:.+]] = linalg.fill ins(%[[ARG0]]outs(%{{.+}}{{.*}}
+  
   %empty_dynamic = tensor.empty(%c1) : tensor<1x2x3x?xi1>
   %filled = linalg.fill ins(%arg0 : i1) outs(%empty_dynamic : tensor<1x2x3x?xi1>) -> tensor<1x2x3x?xi1>
-
-  //  CHECK:   %[[EXTRACTED:.+]] = tensor.extract %[[FILL]]
+  
   %extracted = tensor.extract %filled[%c0, %c0, %c0, %c0] : tensor<1x2x3x?xi1>
 
   //  CHECK:   return %[[ARG0]]
