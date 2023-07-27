@@ -644,16 +644,14 @@ public:
                                 PatternRewriter &rewriter) const override {
     // see if tensor input of tensor.extract op is result of linalg.fill op
     auto fillOp = extractOp.getTensor().getDefiningOp<linalg::FillOp>();
-    if (!fillOp) {
+    if (!fillOp)
       return failure();
-    }
 
     // get scalar input operand of linalg.fill
     Value extractedScalar = fillOp.getInputs()[0];
 
     // replace tensor.extract op with op that simply produces the scalar
-    rewriter.replaceOpWithNewOp<arith::ExtFOp>(
-        extractOp, extractedScalar.getType(), extractedScalar);
+    rewriter.replaceOp(extractOp, extractedScalar);
     return success();
   }
 };
